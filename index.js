@@ -1,0 +1,40 @@
+const express = require('express')
+const cors = require('cors')
+const { google } = require("googleapis")
+
+const app = express();
+app.use(cors())
+
+app.get("/api", async (req, res) => {
+
+    const auth = new google.auth.GoogleAuth({
+        keyFile: "credentials.json", 
+        scopes: "https://www.googleapis.com/auth/spreadsheets"
+    })
+    // Create client instance for auth
+    const client = await auth.getClient();
+
+    // Instance of Google Sheets API
+
+    const googleSheets = google.sheets({ version: "v4", auth: client })
+   
+    const spreadsheetId = "1DeqFo6-v4RdJ6j7Gf5pSqil6CG14lUqlyqAtB7dtHxI";
+
+    const getUserURL = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!B2"
+    })
+    
+    const spreadsheetIdForUser = await getUserURL.data.values[0][0]
+
+    const userData = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!B2"
+    })
+    console.log(userData.data.values)
+    res.json(spreadsheetIdForUser)
+})
+
+app.listen(3000, () => console.log("running on 3000"))
