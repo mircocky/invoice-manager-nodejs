@@ -3,7 +3,9 @@ const cors = require('cors')
 const { google } = require("googleapis")
 
 const app = express();
-app.use(cors())
+app.use(cors({
+    origin: "*"
+}))
 
 app.get("/api", async (req, res) => {
 
