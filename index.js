@@ -18,7 +18,7 @@ app.get("/api", async (req, res) => {
 
     const googleSheets = google.sheets({ version: "v4", auth: client })
    
-    const spreadsheetId = "1DeqFo6-v4RdJ6j7Gf5pSqil6CG14lUqlyqAtB7dtHxI";
+    const spreadsheetId = "1DeqFo6-v4RdJ6j7Gf5pSqil6CG14lUqlyqAtB7dtHxI"; // main sheet
 
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
@@ -28,13 +28,32 @@ app.get("/api", async (req, res) => {
     
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
 
-    const userData = await googleSheets.spreadsheets.values.get({
+    const businessDetalsSheetKeys = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId: spreadsheetIdForUser,
-        range: "Invoices!B2"
+        range: "BusinessDetails!A1:1"
     })
-    console.log(userData.data.values)
-    res.json(spreadsheetIdForUser)
+
+    const businessDetailsData = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "BusinessDetails!A2:2"
+    })
+
+    const keys = await businessDetalsSheetKeys.data.values[0]
+    const values = await businessDetailsData.data.values[0]
+
+    const obj = await {};
+    await keys.forEach((key, index) => {
+       obj[key] = values[index];
+    });
+
+
+    console.log(businessDetalsSheetKeys.data.values[0])
+    console.log(businessDetailsData.data.values[0])
+    // console.log(businessDetails)
+    // console.log(businessDetails)
+    res.json([obj])
 })
 
-app.listen(3000, () => console.log("running on 3000"))
+app.listen(3001, () => console.log("running on 3000"))
