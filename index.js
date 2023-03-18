@@ -31,7 +31,7 @@ app.get("/loadBusinessDetails", async (req, res) => {
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2"
+        range: "Users!B2" // please change dynamically 
     })
     
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
@@ -63,6 +63,84 @@ app.get("/loadBusinessDetails", async (req, res) => {
     // console.log(businessDetails)
     res.json([obj])
 })
+
+app.post("/loadDataOfInvoices", async (req, res) => {
+
+    const { currentStatus, todayISO } = await req.body;
+
+    console.log(currentStatus)
+    console.log(todayISO)
+ 
+    const getUserURL = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!B2" // please change dynamically 
+    })
+    
+    const spreadsheetIdForUser = await getUserURL.data.values[0][0]
+
+    const invoicesDataKeys = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!A1:1"
+    })
+
+    const invoicesData = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!A2:J",
+    })
+
+    const keys = await invoicesDataKeys.data.values[0]
+    const values = await invoicesData.data.values
+
+
+    if (currentStatus == "Paid") {
+     var filteredData = await values.filter(row => row[9].includes('Paid'));
+    } else if (currentStatus == "Unpaid") {
+     var filteredData = await values.filter(row => row[9].includes('Unpaid'));
+    } else if (currentStatus === "All") {
+      var filteredData = await invoicesData.data.values
+    } else if (currentStatus === "Late") {
+        var filteredData = await values.filter(row => row[8] < todayISO )
+    }
+    
+    console.log(filteredData)
+
+    let obj = await [];
+    for (let i = 0; i < filteredData.length; i++) {
+      obj[i] = await keys.reduce((accumulator, element, index) => {
+        return { ...accumulator, [element]: filteredData[i][index] };
+      }, {});
+    }
+
+    // const obj = await {};
+    // for (let i = 0; i < values.length; i++) {
+    //     for (let j = 0; j < keys.length; j++) {
+    //       obj[keys[j]] = values[i][j];
+    //     }
+    //   }
+    // for (let i = 0; i < values.length; i++) {
+    // await keys.forEach( async (key, index) => {
+    //     obj[key]= await values[i][index];
+    //    })
+    // }
+
+//     for (let i = 0; i < values.length; i++) {
+//     await keys.forEach((key, index) => {
+//      obj[i][key]= values[i][index]; 
+//     })
+//    }
+
+    // console.log(invoicesData.data.values)
+    // console.log(values.length)
+    // console.log(obj)
+    
+    // console.log(businessDetails)
+    // console.log(businessDetails)
+    res.json([obj])
+})
+
 
 
 app.post("/newInvoice", async (req, res) => {
@@ -103,7 +181,7 @@ app.post("/newInvoice", async (req, res) => {
         range: "Invoices!A:Z",
         valueInputOption: "USER_ENTERED",
         resource:{
-          values:[[invoiceNum,billtoEmail, billtoName, billtoFullAddress,String("'"+billtoContactNumber),billtoItems,billingTotals,issueDate,dueDate,currentStatus]]
+          values:[[invoiceNum,billtoEmail, billtoName, billtoFullAddress,String("'"+billtoContactNumber),billtoItems,billingTotals,"'"+issueDate,"'"+dueDate,currentStatus]]
         }
     })
 
