@@ -209,7 +209,50 @@ app.post("/newInvoice", async (req, res) => {
      res.json({invoiceNum })
 })
 
+app.post("/saveSettings", async (req, res) => {
 
+    const getUserURL = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!B2" // please change dynamically - User Google Sheet
+
+    })
+    
+    const spreadsheetIdForUser = await getUserURL.data.values[0][0]
+
+     await googleSheets.spreadsheets.values.update({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "BusinessDetails!H2",
+        valueInputOption: "USER_ENTERED",
+        resource:{
+          values:[[JSON.stringify(req.body.preEnteredItems)]]
+        }
+    })
+
+    const businessDetalsSheetKeys = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "BusinessDetails!A1:1"
+    })
+
+    const businessDetailsData = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "BusinessDetails!A2:2"
+    })
+
+    const keys = await businessDetalsSheetKeys.data.values[0]
+    const values = await businessDetailsData.data.values[0]
+
+    const obj = await {};
+    await keys.forEach((key, index) => {
+       obj[key] = values[index];
+    });
+
+
+ res.json([obj])
+})
 
 
 
