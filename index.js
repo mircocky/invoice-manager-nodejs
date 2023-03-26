@@ -66,10 +66,8 @@ app.get("/loadBusinessDetails", async (req, res) => {
 
 app.post("/loadDataOfInvoices", async (req, res) => {
 
-    const { currentStatus, todayISO } = await req.body;
+    const { currentStatus, todayISO, periodSelected } = await req.body;
 
-    console.log(currentStatus)
-    console.log(todayISO)
  
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
@@ -92,20 +90,20 @@ app.post("/loadDataOfInvoices", async (req, res) => {
     })
 
     const keys = await invoicesDataKeys.data.values[0]
-    const values = await invoicesData.data.values
-
+    const values = await invoicesData.data.values.filter((row => {return row[7] >= periodSelected.encodedStartDate && row[7] <= periodSelected.encodedEndDate}))
+    
+    console.log(values)
 
     if (currentStatus == "Paid") {
      var filteredData = await values.filter(row => row[9].includes('Paid'));
     } else if (currentStatus == "Unpaid") {
      var filteredData = await values.filter(row => row[9].includes('Unpaid'));
     } else if (currentStatus === "All") {
-      var filteredData = await invoicesData.data.values
+      var filteredData = await values
     } else if (currentStatus === "Late") {
         var filteredData = await values.filter(row => row[8] < todayISO )
     }
-    
-    console.log(filteredData)
+
 
     let obj = await [];
     for (let i = 0; i < filteredData.length; i++) {
@@ -254,6 +252,74 @@ app.post("/saveSettings", async (req, res) => {
  res.json([obj])
 })
 
+app.post("/confirmPayment", async (req, res) => {
+
+    console.log(req.body)
+
+    const { selected, currentStatus, periodSelected } = await req.body;
+
+
+
+    const getUserURL = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!B2" // please change dynamically - User Google Sheet
+
+    })
+    
+    const spreadsheetIdForUser = await getUserURL.data.values[0][0]
+
+        const invoicesData = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!A2:J",
+    })
+
+
+    selected.map( async element => { 
+        const rowIndex = await invoicesData.data.values.findIndex(row => row[0]=== element )
+
+        console.log(rowIndex)
+        await googleSheets.spreadsheets.values.update({
+           auth,
+           spreadsheetId: spreadsheetIdForUser,
+           range: "Invoices!J" + new Number(rowIndex+ 2) ,
+           valueInputOption: "USER_ENTERED",
+           resource:{
+           //   values:[[JSON.stringify(req.body)]]
+             values:[['Paid']]
+           }
+       })
+
+    })
+ 
+    const invoicesDataKeys = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!A1:1"
+    })
+
+    const invoicesDataAfter = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: spreadsheetIdForUser,
+        range: "Invoices!A2:J",
+    })
+
+    const keys = await invoicesDataKeys.data.values[0]
+    const values = await invoicesDataAfter.data.values.filter((row => {return row[7] >= periodSelected.encodedStartDate && row[7] <= periodSelected.encodedEndDate}))
+    var filteredData = await values.filter(row => row[9].includes(currentStatus))
+
+console.log(filteredData)
+
+    let obj = await [];
+    for (let i = 0; i < filteredData.length; i++) {
+      obj[i] = await keys.reduce((accumulator, element, index) => {
+        return { ...accumulator, [element]: filteredData[i][index] };
+      }, {});
+    }
+
+    res.json([obj])
+})
 
 
 
