@@ -22,18 +22,35 @@ const client = auth.getClient();
 // Instance of Google Sheets API
 
 const googleSheets = google.sheets({ version: "v4", auth: client })
-
 const spreadsheetId = "1DeqFo6-v4RdJ6j7Gf5pSqil6CG14lUqlyqAtB7dtHxI"; // main sheet
 
 
-app.get("/loadBusinessDetails", async (req, res) => {
+app.post("/loadBusinessDetails", async (req, res) => {
+    
+    const email = await req.body.email.toLowerCase() 
+
+    // const email = await 'hhdesigntiling@gmail.com'
+
+    const userNames = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!A2:B" // please change dynamically 
+    })
+
+    const rowIndex = await userNames.data.values.findIndex(row => row[0].toLowerCase()=== email)
+
+
+   if(rowIndex===-1) {
+    res.json({validity:"invalid"})
+    return;    
+    }
 
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2" // please change dynamically 
+        range: "Users!B"+String((new Number(rowIndex)+2)) // please change dynamically 
     })
-    
+
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
 
     const businessDetalsSheetKeys = await googleSheets.spreadsheets.values.get({
@@ -59,22 +76,39 @@ app.get("/loadBusinessDetails", async (req, res) => {
 
     console.log(businessDetalsSheetKeys.data.values[0])
     console.log(businessDetailsData.data.values[0])
-    // console.log(businessDetails)
-    // console.log(businessDetails)
+
     res.json([obj])
 })
 
 app.post("/loadDataOfInvoices", async (req, res) => {
 
-    const { currentStatus, todayISO, periodSelected } = await req.body;
+    const { userEmail, currentStatus, todayISO, periodSelected } = await req.body;
 
  
+    const email = await userEmail.toLowerCase() 
+
+    // const email = await 'hhdesigntiling@gmail.com'
+
+    const userNames = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!A2:B" // please change dynamically 
+    })
+
+    const rowIndex = await userNames.data.values.findIndex(row => row[0].toLowerCase()=== email)
+
+
+   if(rowIndex===-1) {
+    res.json({validity:"invalid"})
+    return;    
+    }
+
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2" // please change dynamically 
+        range: "Users!B"+String((new Number(rowIndex)+2)) // please change dynamically 
     })
-    
+
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
 
     const invoicesDataKeys = await googleSheets.spreadsheets.values.get({
@@ -143,17 +177,36 @@ app.post("/loadDataOfInvoices", async (req, res) => {
 
 app.post("/newInvoice", async (req, res) => {
 
-    const { billtoEmail, billtoName, billtoFullAddress,billtoContactNumber,billtoItems,billingTotals,issueDate,dueDate,currentStatus } = req.body;
+    const { userEmail, billtoEmail, billtoName, billtoFullAddress,billtoContactNumber,billtoItems,billingTotals,issueDate,dueDate,currentStatus } = req.body;
     
     // const obj = [{userName:name}]
+
+    const email = await userEmail.toLowerCase() 
+
+    // const email = await 'hhdesigntiling@gmail.com'
+
+    const userNames = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!A2:B" // please change dynamically 
+    })
+
+    const rowIndex = await userNames.data.values.findIndex(row => row[0].toLowerCase()=== email)
+
+
+   if(rowIndex===-1) {
+    res.json({validity:"invalid"})
+    return;    
+    }
 
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2"
+        range: "Users!B"+String((new Number(rowIndex)+2)) // please change dynamically 
     })
-    
+
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
+
 
 
     const getArrayOfInvoiceNums = await googleSheets.spreadsheets.values.get({
@@ -209,13 +262,33 @@ app.post("/newInvoice", async (req, res) => {
 
 app.post("/saveSettings", async (req, res) => {
 
+
+    const { userEmail } = req.body;
+
+    const email = await userEmail.toLowerCase() 
+
+    // const email = await 'hhdesigntiling@gmail.com'
+
+    const userNames = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!A2:B" // please change dynamically 
+    })
+
+    const rowIndex = await userNames.data.values.findIndex(row => row[0].toLowerCase()=== email)
+
+
+   if(rowIndex===-1) {
+    res.json({validity:"invalid"})
+    return;    
+    }
+
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2" // please change dynamically - User Google Sheet
-
+        range: "Users!B"+String((new Number(rowIndex)+2)) // please change dynamically 
     })
-    
+
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
 
      await googleSheets.spreadsheets.values.update({
@@ -256,17 +329,34 @@ app.post("/confirmPayment", async (req, res) => {
 
     console.log(req.body)
 
-    const { selected, currentStatus, periodSelected } = await req.body;
+    const { userEmail, selected, currentStatus, periodSelected } = await req.body;
 
 
+
+    const email = await userEmail.toLowerCase() 
+
+    // const email = await 'hhdesigntiling@gmail.com'
+
+    const userNames = await googleSheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId,
+        range: "Users!A2:B" // please change dynamically 
+    })
+
+    const rowIndex = await userNames.data.values.findIndex(row => row[0].toLowerCase()=== email)
+
+
+   if(rowIndex===-1) {
+    res.json({validity:"invalid"})
+    return;    
+    }
 
     const getUserURL = await googleSheets.spreadsheets.values.get({
         auth,
         spreadsheetId,
-        range: "Users!B2" // please change dynamically - User Google Sheet
-
+        range: "Users!B"+String((new Number(rowIndex)+2)) // please change dynamically 
     })
-    
+
     const spreadsheetIdForUser = await getUserURL.data.values[0][0]
 
         const invoicesData = await googleSheets.spreadsheets.values.get({
@@ -323,4 +413,4 @@ console.log(filteredData)
 
 
 
-app.listen(3001, () => console.log("running on 3001"))
+app.listen(3002, () => console.log("running on 3002"))
