@@ -2,14 +2,20 @@ const express = require('express')
 const cors = require('cors')
 const { google } = require("googleapis")
 const bodyParser = require('body-parser'); // automatic parsing
+const nodemailer = require('nodemailer')
+const multer = require('multer');
+const fileUpload = require('express-fileupload');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
     origin: "*",
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }))
-
+app.use(fileUpload());
 
 const auth = new google.auth.GoogleAuth({
     keyFile: "credentials.json", 
@@ -411,6 +417,73 @@ console.log(filteredData)
     res.json([obj])
 })
 
+app.post('/sendEmail',  async (req, res) => {
 
+    const pdfFile = await req.files.file.data;
+    const invoiceData = await JSON.parse(req.body.data)
+    const businessDetails = await invoiceData.businessDetails[0]
+    const invoiceDetails = await invoiceData.invoiceDetails
+    const selected = await invoiceData.selected
+
+let maileTransporter = nodemailer.createTransport({
+    service:'gmail',
+    auth:{
+        user:"stevekim0315@gmail.com",
+        pass:"bpsyjlazrtvjoiib"
+    }
+})
+
+let details ={
+    from:"stevekim0315@gmail.com",
+    to:"stevekim0315@gmail.com",
+    subject:`Reminder - Payment for Invoice #${invoiceDetails.invoiceNum} is Overdue`,
+    html:`
+    <div style="font-size: 12px; color: black;">
+    <pre>
+   <span style="color: blue;"> Dear ${invoiceDetails.billtoName} </span>,
+  
+      I hope this email finds you well. 
+  
+      I am writing to remind you that the payment for invoice #${invoiceDetails.invoiceNum} is now overdue.
+  
+      As a valued customer, we greatly appreciate your business and would like to continue providing you with our services. 
+  
+      However, as we have not received payment for the aforementioned invoice, we kindly request that you settle your account as soon as possible.
+  
+      Please find attached a copy of the invoice for your reference.
+  
+      If you have any questions or concerns regarding this matter, please do not hesitate to contact us.
+  
+      Thank you for your attention to this matter.
+  
+      Best regards,
+  
+<span style="font-size: 16px; color: blue;"> ${businessDetails.businessName} </span>
+    <span style="color: blue;"> ${businessDetails.businessEmail} </span>
+    <span style="color: blue;"> ${businessDetails.businessContactNumber} </span>
+    </pre>
+  </div>
+    `,
+    attachments: [
+        {   // utf-8 string as an attachment
+            filename: "Invoice #"+businessDetails.invoiceNum +".pdf",
+            content: pdfFile,
+            contentType: 'application/pdf'
+        },
+    ]
+}
+
+maileTransporter.sendMail(details,(err)=>{
+    if(err){
+        console.log("errors",err)
+    } 
+    else{
+        console.log("just sent")
+        res.json({result:"success"})
+    }
+
+})
+
+})
 
 app.listen(3002, () => console.log("running on 3002"))
